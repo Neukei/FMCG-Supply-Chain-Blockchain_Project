@@ -1,122 +1,76 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/layout/Layout';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Lazy-loaded pages
+const Landing     = lazy(() => import('./pages/Landing'));
+const Dashboard   = lazy(() => import('./pages/Dashboard'));
+const Products    = lazy(() => import('./pages/Products'));
+const Batches     = lazy(() => import('./pages/Batches'));
+const BatchDetail = lazy(() => import('./pages/BatchDetail'));
+const Units       = lazy(() => import('./pages/Units'));
+const Transfers   = lazy(() => import('./pages/Transfers'));
+const Verify      = lazy(() => import('./pages/Verify'));
+const Audit       = lazy(() => import('./pages/Audit'));
+const Participants = lazy(() => import('./pages/Participants'));
+const ExpiryRecall = lazy(() => import('./pages/ExpiryRecall'));
 
+function LoadingScreen() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '100vh', background: 'var(--navy)',
+      flexDirection: 'column', gap: '1rem',
+    }}>
+      <div style={{ fontSize: '2rem' }}>⚓</div>
+      <div style={{ fontFamily: 'Cinzel, serif', color: 'var(--gold-dim)',
+        fontSize: '0.8rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+        Loading…
+      </div>
+    </div>
+  );
 }
 
-export default App
+function NotFound() {
+  return (
+    <div className="page animate-in">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', minHeight: '60vh', gap: '1rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '4rem', opacity: 0.3 }}>🗺️</div>
+        <h1 className="page-title">404 — Chart Unknown</h1>
+        <p className="page-subtitle">These waters are uncharted. The page you seek does not exist.</p>
+        <a href="/" className="btn btn-gold" style={{ marginTop: '0.5rem' }}>← Return to Port</a>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        {/* Landing page (no layout) */}
+        <Route path="/" element={<Landing />} />
+
+        {/* App pages (with sidebar layout) */}
+        <Route element={<Layout />}>
+          <Route path="/dashboard"    element={<Dashboard />} />
+          <Route path="/products"     element={<Products />} />
+          <Route path="/products/:id" element={<Products />} />
+          <Route path="/batches"      element={<Batches />} />
+          <Route path="/batches/:id"  element={<BatchDetail />} />
+          <Route path="/units"        element={<Units />} />
+          <Route path="/units/:id"    element={<Units />} />
+          <Route path="/transfers"    element={<Transfers />} />
+          <Route path="/history"      element={<Transfers />} />
+          <Route path="/verify"       element={<Verify />} />
+          <Route path="/verify/:id"   element={<Verify />} />
+          <Route path="/audit"        element={<Audit />} />
+          <Route path="/participants" element={<Participants />} />
+          <Route path="/expiry"       element={<ExpiryRecall />} />
+          <Route path="*"             element={<NotFound />} />
+        </Route>
+      </Routes>
+    </Suspense>
+  );
+}
