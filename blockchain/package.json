@@ -1,0 +1,21 @@
+{
+  "name": "fmcg-supplychain-blockchain",
+  "version": "1.0.0",
+  "description": "FMCG Supply Chain Tracking Smart Contracts",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:verbose": "hardhat test --verbose",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@swc/core": "^1.16.18",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0"
+  }
+}

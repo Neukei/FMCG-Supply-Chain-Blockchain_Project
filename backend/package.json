@@ -1,0 +1,19 @@
+{
+  "name": "fmcg-supplychain-backend",
+  "version": "1.0.0",
+  "description": "FMCG Supply Chain Tracking - Backend API",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --experimental-sqlite src/index.js",
+    "start": "node --experimental-sqlite src/index.js",
+    "test": "node --experimental-sqlite --test tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "uuid": "^11.0.0"
+  }
+}
