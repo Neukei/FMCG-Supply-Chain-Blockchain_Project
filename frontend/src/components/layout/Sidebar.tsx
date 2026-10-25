@@ -1,197 +1,217 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../../contexts/WalletContext';
-import { chainName } from '../../utils/helpers';
 
-// 9 Modules specified in Master Prompt
-const NAV_MODULES = [
-  {
-    section: 'Navigation',
-    links: [
-      { to: '/dashboard', label: 'Command Deck', icon: '🧭', badge: null },
-      { to: '/map', label: 'Supply Chain Map', icon: '🗺️', badge: 'LIVE' },
-      { to: '/routes', label: 'Logistics Network', icon: '🚢', badge: null },
-    ]
-  },
-  {
-    section: 'Inventory & Traceability',
-    links: [
-      { to: '/products', label: 'Products & Batches', icon: '📦', badge: null },
-      { to: '/units', label: 'Unit Ledger', icon: '🏷️', badge: null },
-      { to: '/transfers', label: 'Shipments & Routes', icon: '⚓', badge: null },
-    ]
-  },
-  {
-    section: 'Governance & Trust',
-    links: [
-      { to: '/expiry', label: 'Quality & Peril', icon: '☠️', badge: 'ALERT' },
-      { to: '/audit', label: 'Blockchain Ledger', icon: '🔗', badge: null },
-      { to: '/participants', label: 'Crew & Facilities', icon: '👥', badge: null },
-      { to: '/verify', label: 'Public Verifier', icon: '🔍', badge: null },
-      { to: '/settings', label: 'System Settings', icon: '⚙️', badge: null },
-    ]
-  }
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+  badge?: string;
+  category: 'fleet' | 'cargo' | 'ledger' | 'command';
+}
+
+const NAV_ITEMS: NavItem[] = [
+  // Fleet & Navigation
+  { to: '/dashboard',    label: 'Command Deck',     icon: '⚓', category: 'fleet' },
+  { to: '/map',          label: 'Supply Map',       icon: '🗺️', category: 'fleet', badge: 'LIVE' },
+  { to: '/routes',       label: 'Kenway Fleet',     icon: '⛵', category: 'fleet' },
+
+  // Cargo & Manifest
+  { to: '/products',     label: 'Cargo SKUs',       icon: '📦', category: 'cargo' },
+  { to: '/batches',      label: 'Batch Manifest',   icon: '📋', category: 'cargo' },
+  { to: '/units',        label: 'Unit Ledger',      icon: '🏷️', category: 'cargo' },
+  { to: '/transfers',    label: 'Waybills & Log',   icon: '📜', category: 'cargo' },
+
+  // Ledger & Verification
+  { to: '/verify',       label: 'Public Verifier',  icon: '🔍', category: 'ledger' },
+  { to: '/audit',        label: 'Sovereign Audit',  icon: '🛡️', category: 'ledger' },
+  { to: '/expiry',       label: 'Quality & Peril',  icon: '⚠️', category: 'ledger' },
+
+  // Command & Crew
+  { to: '/participants', label: 'Crew Register',    icon: '👥', category: 'command' },
+  { to: '/settings',     label: 'Helm Settings',    icon: '⚙️', category: 'command' },
 ];
 
 export default function Sidebar() {
-  const {
-    address,
-    chainId,
-    isConnected,
-    connect,
-    disconnect,
-    shortAddress,
-    isConnecting,
-    activeActor,
-    switchActor,
-    isDemoMode,
-  } = useWallet();
+  const { activeActor, switchActor, isDemoMode, shortAddress } = useWallet();
+
+  const renderSection = (category: 'fleet' | 'cargo' | 'ledger' | 'command', title: string) => {
+    const items = NAV_ITEMS.filter(item => item.category === category);
+    return (
+      <div className="sidebar-section" key={category}>
+        <span className="sidebar-section-label">{title}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          {items.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <span style={{ fontSize: '1rem', width: 20, textAlign: 'center' }}>{item.icon}</span>
+              <span style={{ flex: 1, letterSpacing: '0.04em' }}>{item.label}</span>
+              {item.badge && (
+                <span style={{
+                  fontSize: '0.58rem',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  padding: '0.1rem 0.4rem',
+                  background: 'rgba(84, 209, 198, 0.2)',
+                  color: 'var(--teal-bright)',
+                  border: '1px solid var(--teal)',
+                  borderRadius: '3px',
+                }}>
+                  {item.badge}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <aside className="sidebar">
-      {/* Top Brand Logo / Maritime Insignia */}
+      {/* Black Flag Command Emblem Logo */}
       <div className="sidebar-logo">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            width: 34,
-            height: 34,
-            borderRadius: 6,
-            background: 'linear-gradient(135deg, rgba(89, 197, 187, 0.25) 0%, rgba(205, 187, 114, 0.2) 100%)',
-            border: '1px solid var(--gold-border)',
+            width: 38,
+            height: 38,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(84, 209, 198, 0.25) 0%, rgba(205, 187, 114, 0.15) 100%)',
+            border: '1.5px solid var(--gold)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '1.25rem',
-            boxShadow: '0 0 10px rgba(89, 197, 187, 0.25)'
+            boxShadow: '0 0 14px rgba(205, 187, 114, 0.35)',
+            flexShrink: 0,
           }}>
             ⚓
           </div>
-          <div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, fontSize: '0.92rem', color: 'var(--gold-lit)', letterSpacing: '0.08em' }}>
-              FMCG LEDGER
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontFamily: 'Cinzel, serif',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              color: 'var(--gold-lit)',
+              letterSpacing: '0.12em',
+              lineHeight: 1.15,
+            }}>
+              BLACK FLAG
             </div>
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              Maritime Provenance
+            <div style={{
+              fontSize: '0.62rem',
+              color: 'var(--teal)',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>
+              SUPPLY LEDGER
             </div>
           </div>
         </div>
 
-        {/* Persona & Wallet Status */}
-        {isConnected ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.35rem' }}>
-            <div style={{
-              background: 'rgba(7, 23, 25, 0.85)',
-              border: '1px solid var(--gold-border)',
-              borderRadius: '4px',
-              padding: '0.4rem 0.6rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.2rem'
+        {/* Active persona role indicator */}
+        <div style={{
+          marginTop: '0.5rem',
+          padding: '0.55rem 0.65rem',
+          background: 'rgba(5, 18, 20, 0.8)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.62rem', color: 'var(--gold-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              CURRENT HELM:
+            </span>
+            <span style={{
+              fontSize: '0.6rem',
+              color: 'var(--teal-bright)',
+              fontFamily: 'JetBrains Mono, monospace',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.62rem' }}>
-                <span style={{ color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em' }}>OFFICER ROLE</span>
-                <span style={{ color: 'var(--teal)', fontSize: '0.6rem' }}>● {isDemoMode ? 'Demo Node' : chainName(chainId)}</span>
-              </div>
-              <select
-                className="select"
-                style={{
-                  fontSize: '0.72rem',
-                  padding: '0.2rem 0.4rem',
-                  height: 'auto',
-                  background: 'var(--bg-primary)',
-                  borderColor: 'var(--divider)',
-                  color: 'var(--text-main)',
-                  cursor: 'pointer'
-                }}
-                value={activeActor ? activeActor.key : 'METAMASK'}
-                onChange={(e) => {
-                  if (e.target.value === 'METAMASK') connect();
-                  else switchActor(e.target.value);
-                }}
-              >
-                <option value="MANUFACTURER">🏭 Elena (Manufacturer)</option>
-                <option value="DISTRIBUTOR">🚚 Marcus (Distributor)</option>
-                <option value="WAREHOUSE">🏢 Sarah (Warehouse)</option>
-                <option value="RETAILER">🏪 Rajesh (Retailer)</option>
-                <option value="ADMIN">👑 System Admin</option>
-                <option value="METAMASK">🦊 Connect Web3 MetaMask</option>
-              </select>
-            </div>
+              {shortAddress || '0x7099...79C8'}
+            </span>
+          </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.2rem' }}>
-              <span style={{ fontSize: '0.68rem', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-muted)' }}>
-                {shortAddress}
-              </span>
-              <button
-                onClick={disconnect}
-                style={{ background: 'transparent', border: 'none', color: 'var(--error)', fontSize: '0.68rem', cursor: 'pointer', padding: 0 }}
-                title="Disconnect"
-              >
-                ✕ Exit
-              </button>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              color: 'var(--text-main)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 140,
+            }}>
+              {activeActor?.name || 'Captain Elena'}
+            </span>
+            <span style={{
+              fontSize: '0.62rem',
+              color: 'var(--gold-lit)',
+              border: '1px solid var(--gold-border)',
+              padding: '0.1rem 0.35rem',
+              borderRadius: '2px',
+              fontFamily: 'Cinzel, serif',
+            }}>
+              {activeActor?.role || 'MANUFACTURER'}
+            </span>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.35rem' }}>
-            <button
-              className="btn btn-gold btn-sm"
-              style={{ width: '100%' }}
-              onClick={connect}
-              disabled={isConnecting}
+
+          {/* Persona selector quick toggle */}
+          {isDemoMode && (
+            <select
+              style={{
+                fontSize: '0.68rem',
+                background: 'rgba(9, 32, 36, 0.9)',
+                border: '1px solid var(--divider)',
+                color: 'var(--text-muted)',
+                borderRadius: '3px',
+                padding: '0.2rem 0.35rem',
+                cursor: 'pointer',
+              }}
+              value={activeActor?.key || 'MANUFACTURER'}
+              onChange={e => switchActor(e.target.value)}
             >
-              {isConnecting ? '⏳ Syncing…' : '🔗 Connect Web3'}
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ width: '100%', fontSize: '0.7rem' }}
-              onClick={() => switchActor('MANUFACTURER')}
-            >
-              🎭 Simulator Deck
-            </button>
-          </div>
-        )}
+              <option value="MANUFACTURER">Captain (Manufacturer)</option>
+              <option value="DISTRIBUTOR">First Mate (Distributor)</option>
+              <option value="WAREHOUSE">Quartermaster (Warehouse)</option>
+              <option value="RETAILER">Merchant (Retailer)</option>
+              <option value="ADMIN">Governor (Admin)</option>
+            </select>
+          )}
+        </div>
       </div>
 
       {/* Navigation Sections */}
-      <div style={{ flex: 1, padding: '0.5rem 0' }}>
-        {NAV_MODULES.map(section => (
-          <div className="sidebar-section" key={section.section}>
-            <div className="sidebar-section-label">{section.section}</div>
-            {section.links.map(link => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.to === '/'}
-                className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-              >
-                <span style={{ fontSize: '0.9rem', width: 20, textAlign: 'center' }}>{link.icon}</span>
-                <span style={{ flex: 1 }}>{link.label}</span>
-                {link.badge && (
-                  <span style={{
-                    fontSize: '0.58rem',
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: 3,
-                    background: link.badge === 'ALERT' ? 'rgba(217, 107, 104, 0.25)' : 'rgba(89, 197, 187, 0.2)',
-                    color: link.badge === 'ALERT' ? 'var(--error)' : 'var(--teal)',
-                    border: `1px solid ${link.badge === 'ALERT' ? 'var(--error)' : 'var(--teal)'}`,
-                    fontWeight: 700
-                  }}>
-                    {link.badge}
-                  </span>
-                )}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+      <div style={{ flex: 1, paddingBottom: '2rem' }}>
+        {renderSection('fleet', 'I. Fleet Navigation')}
+        {renderSection('cargo', 'II. Cargo & Waybills')}
+        {renderSection('ledger', 'III. Cryptographic Ledger')}
+        {renderSection('command', 'IV. Command & Helm')}
       </div>
 
-      {/* Bottom Cartographic Footer */}
-      <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid var(--divider)', fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-          <span style={{ color: 'var(--gold)' }}>SYSTEM PROTOCOL</span>
-          <span>v2.4 SEPOLIA</span>
+      {/* Cartographic Coordinate Ticker */}
+      <div style={{
+        padding: '0.75rem 1rem',
+        borderTop: '1px solid var(--divider)',
+        background: 'rgba(3, 11, 13, 0.9)',
+        fontSize: '0.65rem',
+        fontFamily: 'JetBrains Mono, monospace',
+        color: 'var(--text-dim)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.2rem',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>LAT: 25° 04′ N</span>
+          <span>LON: 77° 20′ W</span>
         </div>
-        <div>Coordinates: 24°N 78°W Caribbean Corridor</div>
+        <div style={{ color: 'var(--teal)', fontSize: '0.62rem' }}>
+          SECTOR: CARIBBEAN SEA BASIN
+        </div>
       </div>
     </aside>
   );

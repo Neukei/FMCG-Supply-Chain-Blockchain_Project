@@ -1,7 +1,9 @@
 // API service for communicating with the backend
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+// When running in browser, if VITE_BACKEND_URL is http://localhost:3001 and fails or is in dev,
+// fallback to same-origin or explicit 127.0.0.1 to avoid Windows IPv6 resolution issues
+const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -10,7 +12,20 @@ export const api = axios.create({
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    // If request failed because of localhost / port mismatch, try fallback
+    const originalRequest = error.config;
+    if (
+      !originalRequest._retry &&
+      error.message &&
+      (error.message.includes('Network Error') || error.code === 'ERR_NETWORK') &&
+      originalRequest.baseURL &&
+      originalRequest.baseURL.includes('localhost')
+    ) {
+      originalRequest._retry = true;
+      originalRequest.baseURL = originalRequest.baseURL.replace('localhost', '127.0.0.1');
+      return api(originalRequest);
+    }
     const message = error.response?.data?.error || error.message || 'Network error';
     return Promise.reject(new Error(message));
   }
