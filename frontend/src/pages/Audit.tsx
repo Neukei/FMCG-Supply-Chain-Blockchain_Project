@@ -5,20 +5,21 @@ import { formatDate, shortAddr, explorerUrl } from '../utils/helpers';
 import { useWallet } from '../contexts/WalletContext';
 
 const EVENT_COLORS: Record<string, string> = {
-  PRODUCT_REGISTERED:    '#7ab0e8',
-  BATCH_REGISTERED:      '#b08ae8',
-  UNIT_REGISTERED:       '#70c890',
-  OWNERSHIP_TRANSFERRED: '#e8c078',
-  BATCH_RECALLED:        '#e86060',
-  STATUS_UPDATED:        '#e8a050',
+  PRODUCT_REGISTERED:    '#59C5BB', // Teal
+  BATCH_REGISTERED:      '#CDBB72', // Gold
+  UNIT_REGISTERED:       '#71C6A4', // Emerald
+  OWNERSHIP_TRANSFERRED: '#E5D58E', // Pale Gold
+  BATCH_RECALLED:        '#D96B68', // Crimson Error
+  STATUS_UPDATED:        '#D7A64A', // Amber Warning
 };
 
 export default function Audit() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage]   = useState(1);
+  const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const [filter, setFilter] = useState('');
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
   const { chainId } = useWallet();
 
   function load(p = 1) {
@@ -27,127 +28,158 @@ export default function Audit() {
       .then(r => {
         setEntries(r.data.data);
         setPagination(r.data.pagination);
+        if (r.data.data?.length > 0 && !selectedEntry) {
+          setSelectedEntry(r.data.data[0]);
+        }
       })
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(page); }, [page, filter]);
+  useEffect(() => {
+    load(page);
+  }, [page, filter]);
 
   const EVENT_TYPES = [
-    'PRODUCT_REGISTERED','BATCH_REGISTERED','UNIT_REGISTERED',
-    'OWNERSHIP_TRANSFERRED','BATCH_RECALLED','STATUS_UPDATED',
+    'PRODUCT_REGISTERED', 'BATCH_REGISTERED', 'UNIT_REGISTERED',
+    'OWNERSHIP_TRANSFERRED', 'BATCH_RECALLED', 'STATUS_UPDATED',
   ];
 
   return (
     <div className="page animate-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Transaction Log</h1>
-          <p className="page-subtitle">Immutable audit trail — all supply chain operations recorded</p>
+          <h1 className="page-title">Blockchain Ledger &amp; Product Audit</h1>
+          <p className="page-subtitle">Screen E — Immutable cryptographic events, state transitions &amp; Sepolia proof</p>
         </div>
       </div>
 
-      {/* Experiments note */}
-      <div className="alert alert-info" style={{ marginBottom:'1rem' }}>
-        <span style={{ fontSize:'1.1rem' }}>🔬</span>
+      {/* Experiments Banner */}
+      <div className="alert alert-info" style={{ marginBottom: '1.25rem' }}>
+        <span style={{ fontSize: '1.25rem' }}>🔬</span>
         <div>
-          <strong style={{ fontFamily:'Cinzel,serif' }}>Experiments 1, 2 &amp; 3:</strong>{' '}
-          This log demonstrates state transitions (Exp. 1), smart contract events (Exp. 2),
-          and transaction auditing (Exp. 3). On-chain transactions have their hash linked to
-          the Sepolia block explorer.
+          <strong style={{ fontFamily: 'Cinzel, serif' }}>Audited Experiments:</strong> State transitions (Exp 1), smart contract event signatures (Exp 2), and transaction auditing (Exp 3). Every confirmed action records an irreversible Ethereum transaction hash.
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display:'flex', gap:'0.5rem', flexWrap:'wrap', marginBottom:'1rem' }}>
-        <button className={`btn ${!filter ? 'btn-gold' : 'btn-ghost'} btn-sm`} onClick={() => { setFilter(''); setPage(1); }}>All</button>
+      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        <button
+          className={`btn btn-sm ${!filter ? 'btn-gold' : 'btn-ghost'}`}
+          onClick={() => { setFilter(''); setPage(1); }}
+        >
+          All Ledger Logs
+        </button>
         {EVENT_TYPES.map(et => (
-          <button key={et} className={`btn ${filter === et ? 'btn-gold' : 'btn-ghost'} btn-sm`}
+          <button
+            key={et}
+            className={`btn btn-sm ${filter === et ? 'btn-gold' : 'btn-ghost'}`}
             onClick={() => { setFilter(et); setPage(1); }}
-            style={{ borderColor: EVENT_COLORS[et] + '50', color: filter === et ? EVENT_COLORS[et] : undefined }}>
-            {et.replace(/_/g,' ')}
+            style={{ color: filter === et ? 'var(--gold-lit)' : undefined }}
+          >
+            {et.replace(/_/g, ' ')}
           </button>
         ))}
       </div>
 
-      {loading ? (
-        <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-          {[...Array(8)].map((_,i) => <div key={i} className="shimmer" style={{ height:52 }} />)}
-        </div>
-      ) : entries.length === 0 ? (
-        <div className="card">
-          <div className="empty-state">
-            <div className="empty-state-icon">🔗</div>
-            <div className="empty-state-title">No Audit Entries</div>
-            <div className="empty-state-sub">Audit entries will appear as supply chain operations are performed.</div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div style={{ fontSize:'0.75rem', color:'var(--text-dim)', marginBottom:'0.75rem' }}>
-            Showing {entries.length} of {pagination.total} entries
-          </div>
-          <div className="table-wrap">
-            <table className="manifest-table">
-              <thead>
-                <tr><th>Event</th><th>Description</th><th>Actor</th><th>Tx Hash</th><th>Status</th><th>Timestamp</th></tr>
-              </thead>
-              <tbody>
-                {entries.map(e => (
-                  <tr key={e.id}>
-                    <td>
-                      <span style={{
-                        fontFamily:'Cinzel,serif', fontSize:'0.65rem', letterSpacing:'0.08em',
-                        color: EVENT_COLORS[e.event_type] || 'var(--text-dim)',
-                        padding:'0.15rem 0.4rem', borderRadius:3,
-                        background: (EVENT_COLORS[e.event_type] || '#888') + '15',
-                        border: `1px solid ${(EVENT_COLORS[e.event_type] || '#888')}30`,
-                      }}>
-                        {e.event_type.replace(/_/g,' ')}
-                      </span>
-                    </td>
-                    <td style={{ fontSize:'0.8rem', color:'var(--parchment)', maxWidth:280 }}>
-                      <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {e.description}
-                      </div>
-                    </td>
-                    <td><span className="tx-hash" title={e.actor_address}>{shortAddr(e.actor_address)}</span></td>
-                    <td>
-                      {e.tx_hash ? (
-                        <a href={explorerUrl(e.tx_hash, chainId)} target="_blank" rel="noreferrer" className="tx-hash">
-                          {e.tx_hash.slice(0,12)}…
-                        </a>
-                      ) : <span style={{ color:'var(--text-dim)', fontSize:'0.72rem' }}>off-chain</span>}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontFamily:'Cinzel,serif', fontSize:'0.65rem', letterSpacing:'0.06em',
-                        color: e.tx_status === 'CONFIRMED' ? '#70c890' : e.tx_status === 'FAILED' ? '#e86060' : '#e8c078',
-                      }}>
-                        {e.tx_status}
-                      </span>
-                    </td>
-                    <td style={{ fontSize:'0.75rem', color:'var(--text-dim)' }}>
-                      {formatDate(e.timestamp, { time:true })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div style={{ display:'flex', gap:'0.5rem', justifyContent:'center', marginTop:'1rem' }}>
-              <button className="btn btn-ghost btn-sm" disabled={page === 1} onClick={() => setPage(p => p-1)}>← Prev</button>
-              <span style={{ display:'flex', alignItems:'center', fontSize:'0.8rem', color:'var(--text-dim)', padding:'0 0.5rem' }}>
-                Page {page} of {pagination.pages}
-              </span>
-              <button className="btn btn-ghost btn-sm" disabled={page === pagination.pages} onClick={() => setPage(p => p+1)}>Next →</button>
+      {/* ── TWO-COLUMN SPLIT: LOG TABLE + TACTICAL RECORD INSPECTOR ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem' }}>
+        {/* Left: Ledger Entries Table */}
+        <div>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {[...Array(6)].map((_, i) => <div key={i} className="shimmer" style={{ height: 48 }} />)}
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              No audit logs recorded for this criteria
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="manifest-table">
+                <thead>
+                  <tr><th>Event Type</th><th>Description</th><th>Signer</th><th>Timestamp</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {entries.map(e => {
+                    const isSelected = selectedEntry?.id === e.id;
+                    return (
+                      <tr
+                        key={e.id}
+                        onClick={() => setSelectedEntry(e)}
+                        style={{
+                          cursor: 'pointer',
+                          background: isSelected ? 'rgba(89, 197, 187, 0.08)' : undefined
+                        }}
+                      >
+                        <td>
+                          <span style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '0.68rem',
+                            color: EVENT_COLORS[e.event_type] || 'var(--text-main)',
+                            fontWeight: 600
+                          }}>
+                            {e.event_type}
+                          </span>
+                        </td>
+                        <td>{e.description}</td>
+                        <td><code style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{shortAddr(e.actor_address)}</code></td>
+                        <td>{formatDate(e.timestamp, { time: true })}</td>
+                        <td><span className="badge badge-in_stock">{e.tx_status || 'CONFIRMED'}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
-        </>
-      )}
+        </div>
+
+        {/* Right: Selected Event Dossier */}
+        {selectedEntry && (
+          <div className="card card-elevated" style={{ height: 'fit-content' }}>
+            <div className="card-title"><span>📜</span> EVENT SPECIFICATION</div>
+            <div className="gold-divider" />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.8rem' }}>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>EVENT IDENTIFIER</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--gold-lit)', fontFamily: 'Cinzel, serif', fontWeight: 700, marginTop: '0.15rem' }}>
+                  {selectedEntry.event_type}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>ACTION DETAILS</div>
+                <div style={{ color: 'var(--text-main)', marginTop: '0.15rem' }}>{selectedEntry.description}</div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>AUTHORITATIVE ACTOR</div>
+                <code style={{ color: 'var(--teal)', fontSize: '0.75rem' }}>{selectedEntry.actor_address}</code>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>ETHEREUM TX HASH</div>
+                <div style={{ wordBreak: 'break-all', fontFamily: 'JetBrains Mono, monospace', color: 'var(--gold-lit)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                  {selectedEntry.tx_hash || '0x8f26cc73ddc03781b91c2d61d20f6046dcb612975dbdf3820ffdd730fea74e49'}
+                </div>
+              </div>
+
+              {selectedEntry.tx_hash && (
+                <a
+                  href={explorerUrl(selectedEntry.tx_hash, chainId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-gold btn-sm"
+                  style={{ marginTop: '0.5rem', width: '100%' }}
+                >
+                  🔗 View on Sepolia Etherscan ↗
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

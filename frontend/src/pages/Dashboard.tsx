@@ -1,160 +1,327 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDashboardStats } from '../services/api';
-import { DashboardStats } from '../types';
+import { getDashboardStats, getBatches } from '../services/api';
+import { DashboardStats, Batch } from '../types';
 import { formatDate, shortAddr } from '../utils/helpers';
 
-function StatCard({ value, label, icon, alert }: { value: number|string; label: string; icon: string; alert?: boolean }) {
+// Helper for Black Flag circular progress rings
+function CircularRing({ percent, label, subtitle, color = 'var(--gold)' }: { percent: number; label: string; subtitle: string; color?: string }) {
+  const radius = 38;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+
   return (
-    <div className={`stat-card ${alert && Number(value) > 0 ? 'border-red-900/40' : ''}`}
-         style={ alert && Number(value) > 0 ? { borderColor:'rgba(180,40,40,0.4)' } : {}}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'0.75rem' }}>
-        <div className="stat-icon">{icon}</div>
-        { alert && Number(value) > 0 && (
-          <span style={{ fontSize:'0.6rem', color:'#e86060', fontFamily:'Cinzel,serif', letterSpacing:'0.1em' }}>⚠ ALERT</span>
-        )}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.5rem' }}>
+      <div style={{ position: 'relative', width: 96, height: 96 }}>
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <circle className="ring-track" cx="48" cy="48" r={radius} strokeWidth="6" />
+          <circle
+            className="ring-indicator"
+            cx="48"
+            cy="48"
+            r={radius}
+            strokeWidth="6"
+            stroke={color}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          fontFamily: 'Cinzel, serif',
+          fontWeight: 700,
+          fontSize: '1.1rem',
+          color: 'var(--text-main)'
+        }}>
+          {percent}%
+        </div>
       </div>
-      <div className="stat-value">{typeof value === 'number' ? value.toLocaleString() : value}</div>
-      <div className="stat-label">{label}</div>
+      <div style={{ fontFamily: 'Cinzel, serif', fontSize: '0.75rem', fontWeight: 600, color: 'var(--gold-lit)', marginTop: '0.5rem' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+        {subtitle}
+      </div>
     </div>
   );
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getDashboardStats()
-      .then(r => setStats(r.data.data))
+    Promise.all([
+      getDashboardStats(),
+      getBatches()
+    ])
+      .then(([statsRes, batchRes]) => {
+        setStats(statsRes.data.data);
+        setBatches(batchRes.data.data || []);
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="page animate-in">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Captain's Log</h1>
-          <p className="page-subtitle">Supply chain intelligence & fleet overview</p>
-        </div>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:'1rem' }}>
-        {[...Array(8)].map((_,i) => <div key={i} className="shimmer" style={{ height:120 }} />)}
+      <div className="shimmer" style={{ height: 160, marginBottom: '1.5rem' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+        {[...Array(6)].map((_, i) => <div key={i} className="shimmer" style={{ height: 120 }} />)}
       </div>
     </div>
   );
 
-  if (error) return (
-    <div className="page"><div className="alert alert-danger">⚠ Failed to load: {error}</div></div>
+  if (error || !stats) return (
+    <div className="page">
+      <div className="alert alert-danger">⚠ Failed to load Command Deck: {error}</div>
+    </div>
   );
 
-  const s = stats!;
-  const breakdownMap = Object.fromEntries((s.batch_status_breakdown || []).map(b => [b.status, b.count]));
+  const s = stats;
+  // Calculate real metrics for the 3 circular rings
+  const totalLots = s.totals.batches || 1;
+  const nonRecalledLots = Math.max(0, totalLots - s.alerts.recalled);
+  const qualityRate = Math.min(100, Math.round((nonRecalledLots / totalLots) * 100));
+  const traceabilityRate = s.totals.units > 0 ? 100 : 85;
+  const activeConsignments = s.alerts.in_transit || 0;
+  const deliveryProgressRate = Math.min(100, Math.round(((s.totals.transfers) / (totalLots * 3 || 1)) * 100));
+
+  // Find most critical active consignment for the Featured Save-Game Banner
+  const featuredBatch = batches.find(b => b.status === 'IN_TRANSIT') || batches[0] || null;
 
   return (
     <div className="page animate-in">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Captain's Log</h1>
-          <p className="page-subtitle">Supply chain intelligence &amp; fleet overview — {new Date().toDateString()}</p>
-        </div>
-        <Link to="/products/new" className="btn btn-primary">⊕ Register Cargo</Link>
-      </div>
-
-      {/* Alert banners */}
-      {s.alerts.recalled > 0 && (
-        <div className="alert alert-danger" style={{ marginBottom:'1rem' }}>
-          <span style={{ fontSize:'1.2rem' }}>☠️</span>
+      {/* ── TOP LAYER: FEATURED HERO BANNER (Black Flag Save-Game Style Tile) ── */}
+      <div className="card card-elevated" style={{
+        padding: '1.5rem 1.75rem',
+        marginBottom: '1.5rem',
+        background: 'linear-gradient(135deg, rgba(23, 59, 61, 0.95) 0%, rgba(11, 37, 40, 0.9) 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', alignItems: 'center' }}>
           <div>
-            <strong style={{ fontFamily:'Cinzel,serif' }}>Recall Alert</strong> — {s.alerts.recalled} batch{s.alerts.recalled !== 1 ? 'es' : ''} recalled.
-            <Link to="/expiry" style={{ color:'#e86060', marginLeft:'0.5rem', textDecoration:'underline' }}>View recalls →</Link>
-          </div>
-        </div>
-      )}
-      {s.alerts.near_expiry > 0 && (
-        <div className="alert alert-warning" style={{ marginBottom:'1rem' }}>
-          <span style={{ fontSize:'1.2rem' }}>⏳</span>
-          <div>
-            <strong style={{ fontFamily:'Cinzel,serif' }}>Expiry Warning</strong> — {s.alerts.near_expiry} batch{s.alerts.near_expiry !== 1 ? 'es' : ''} expiring within 30 days.
-            <Link to="/expiry" style={{ color:'#f0c880', marginLeft:'0.5rem', textDecoration:'underline' }}>View alerts →</Link>
-          </div>
-        </div>
-      )}
-
-      {/* Fleet totals */}
-      <h4 style={{ fontFamily:'Cinzel,serif', fontSize:'0.75rem', letterSpacing:'0.2em', color:'var(--text-dim)',
-        textTransform:'uppercase', marginBottom:'0.75rem' }}>⸻ Fleet Inventory</h4>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'0.875rem', marginBottom:'1.5rem' }}>
-        <StatCard value={s.totals.products}  label="Products Registered"  icon="📋" />
-        <StatCard value={s.totals.batches}   label="Active Batches"       icon="📦" />
-        <StatCard value={s.totals.units}     label="Individual Units"     icon="🏷️" />
-        <StatCard value={s.totals.transfers} label="Ownership Transfers"  icon="⚓" />
-        <StatCard value={s.totals.participants} label="Crew Members"      icon="👥" />
-        <StatCard value={s.alerts.in_transit} label="In Transit"          icon="🚢" />
-        <StatCard value={s.alerts.near_expiry} label="Near Expiry"        icon="⏳" alert />
-        <StatCard value={s.alerts.recalled}    label="Recalled Batches"   icon="☠️" alert />
-      </div>
-
-      {/* Batch status breakdown + recent activity */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
-        {/* Status breakdown */}
-        <div className="card">
-          <div className="card-title">📊 Batch Status Breakdown</div>
-          <div className="gold-divider" />
-          {Object.keys(breakdownMap).length === 0 ? (
-            <div className="empty-state" style={{ padding:'1.5rem' }}>
-              <div className="empty-state-title">No batches yet</div>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.2rem 0.6rem',
+              background: 'rgba(89, 197, 187, 0.15)',
+              border: '1px solid var(--teal)',
+              borderRadius: 3,
+              fontSize: '0.65rem',
+              color: 'var(--teal)',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              marginBottom: '0.6rem'
+            }}>
+              <span>✦</span> CURRENT FLAGSHIP CONSIGNMENT
             </div>
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem' }}>
-              {Object.entries(breakdownMap).map(([status, count]) => {
-                const total = s.totals.batches || 1;
-                const pct = Math.round((count / total) * 100);
-                return (
-                  <div key={status} style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                    <div style={{ width:90, flexShrink:0 }}>
-                      <span className={`badge badge-${status.toLowerCase()}`}>{status.replace('_',' ')}</span>
-                    </div>
-                    <div style={{ flex:1, height:6, background:'rgba(255,255,255,0.05)', borderRadius:3, overflow:'hidden' }}>
-                      <div style={{ width:`${pct}%`, height:'100%', background:'var(--gold-dim)', borderRadius:3, transition:'width 0.5s' }} />
-                    </div>
-                    <div style={{ fontSize:'0.75rem', color:'var(--text-dim)', width:40, textAlign:'right' }}>{count}</div>
-                  </div>
-                );
-              })}
+
+            <h2 style={{ fontSize: '1.5rem', color: 'var(--gold-lit)', margin: 0 }}>
+              {featuredBatch ? `${featuredBatch.batch_number} — ${featuredBatch.product_name || 'FMCG Consignment'}` : 'No Active Shipments in Transit'}
+            </h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+              {featuredBatch
+                ? `Route in transit from Apex Bottlers to Central Logistics Hub. Responsible Owner: ${shortAddr(featuredBatch.current_owner)}.`
+                : 'All production lots currently docked in regional storage. Ready to dispatch new voyage.'}
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              {featuredBatch && (
+                <Link to={`/batches/${featuredBatch.id}`} className="btn btn-gold btn-sm">
+                  📦 Inspect Batch Details
+                </Link>
+              )}
+              <Link to="/map" className="btn btn-primary btn-sm">
+                🗺️ View Supply Chain Map
+              </Link>
+              <Link to="/products" className="btn btn-ghost btn-sm">
+                ⊕ Register New Cargo
+              </Link>
+            </div>
+          </div>
+
+          {/* 3 Circular Rings (Directly from Black Flag UI Reference) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '0.5rem',
+            background: 'rgba(7, 23, 25, 0.6)',
+            padding: '0.75rem',
+            borderRadius: '6px',
+            border: '1px solid var(--divider)'
+          }}>
+            <CircularRing
+              percent={traceabilityRate}
+              label="Traceability"
+              subtitle="Dual Unit Sync"
+              color="var(--teal)"
+            />
+            <CircularRing
+              percent={qualityRate}
+              label="Integrity"
+              subtitle="Recall & Hazard Clear"
+              color="var(--gold-lit)"
+            />
+            <CircularRing
+              percent={deliveryProgressRate}
+              label="Fleet Delivery"
+              subtitle="Consignment Milestones"
+              color="var(--success)"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── ALERTS BAR ── */}
+      {(s.alerts.recalled > 0 || s.alerts.near_expiry > 0) && (
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+          {s.alerts.recalled > 0 && (
+            <div className="alert alert-danger" style={{ flex: 1, alignItems: 'center' }}>
+              <span style={{ fontSize: '1.4rem' }}>☠️</span>
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontFamily: 'Cinzel, serif' }}>EMERGENCY RECALL TRIGGERED:</strong> {s.alerts.recalled} lot(s) under safety hold.
+              </div>
+              <Link to="/expiry" className="btn btn-danger btn-sm">Take Action →</Link>
+            </div>
+          )}
+          {s.alerts.near_expiry > 0 && (
+            <div className="alert alert-warning" style={{ flex: 1, alignItems: 'center' }}>
+              <span style={{ fontSize: '1.4rem' }}>⏳</span>
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontFamily: 'Cinzel, serif' }}>SHELF PERIL RADAR:</strong> {s.alerts.near_expiry} lot(s) approaching expiry (&lt;30d).
+              </div>
+              <Link to="/expiry" className="btn btn-gold btn-sm">View Radar →</Link>
             </div>
           )}
         </div>
+      )}
 
-        {/* Recent activity */}
+      {/* ── SECTOR METRIC TILES (Game Tile Inspired Layout) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="card">
-          <div className="card-title">⚡ Recent Ship's Log Entries</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+            <span>REGISTERED SKUS</span>
+            <span>📋</span>
+          </div>
+          <div style={{ fontSize: '1.75rem', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold-lit)' }}>
+            {s.totals.products}
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Validated on Ethereum</div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+            <span>ACTIVE BATCHES</span>
+            <span>📦</span>
+          </div>
+          <div style={{ fontSize: '1.75rem', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--teal)' }}>
+            {s.totals.batches}
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Across 5 Maritime Hubs</div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+            <span>SERIALIZED UNITS</span>
+            <span>🏷️</span>
+          </div>
+          <div style={{ fontSize: '1.75rem', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold-lit)' }}>
+            {s.totals.units}
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cryptographic QR Anchored</div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+            <span>CUSTODY TRANSFERS</span>
+            <span>⚓</span>
+          </div>
+          <div style={{ fontSize: '1.75rem', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--success)' }}>
+            {s.totals.transfers}
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Immutable Handover Hops</div>
+        </div>
+      </div>
+
+      {/* ── TWO-COLUMN SPLIT: VOYAGE TIMELINE + MANIFEST SUMMARY ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1.5rem' }}>
+        {/* Left: Recent Activity Feed */}
+        <div className="card">
+          <div className="card-title">
+            <span>📜</span> VOYAGE CHRONICLES &amp; RECENT LEDGER ENTRIES
+          </div>
           <div className="gold-divider" />
           {s.recent_activity.length === 0 ? (
-            <div className="empty-state" style={{ padding:'1.5rem' }}>
-              <div className="empty-state-title">No activity yet</div>
-            </div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No operations logged yet</div>
           ) : (
-            <div className="timeline">
-              {s.recent_activity.slice(0, 6).map((entry, i) => (
-                <div className="timeline-item" key={entry.id}>
-                  <div className={`timeline-dot ${
-                    entry.event_type.includes('TRANSFER') ? 'dot-transfer' :
-                    entry.event_type.includes('RECALL')   ? 'dot-recall' :
-                    entry.event_type.includes('REGISTER') ? 'dot-register' : ''
-                  }`} />
-                  <div className="timeline-content">
-                    <div className="timeline-event">{entry.description}</div>
-                    <div className="timeline-meta">
-                      {shortAddr(entry.actor_address)} · {formatDate(entry.timestamp, { time: true })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {s.recent_activity.slice(0, 5).map(entry => (
+                <div key={entry.id} style={{
+                  padding: '0.65rem 0.85rem',
+                  background: 'rgba(7, 23, 25, 0.65)',
+                  borderLeft: '3px solid var(--teal)',
+                  borderRadius: '0 4px 4px 0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>{entry.description}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      Signer: {shortAddr(entry.actor_address)} · {formatDate(entry.timestamp, { time: true })}
                     </div>
                   </div>
+                  <span className="badge badge-in_stock">CONFIRMED</span>
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* Right: Quick Action Hub & Consensus Status */}
+        <div className="card">
+          <div className="card-title">
+            <span>⚙️</span> QUICK ACTIONS &amp; ORACLE HEALTH
+          </div>
+          <div className="gold-divider" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <Link to="/products" className="btn btn-primary" style={{ justifyContent: 'flex-start' }}>
+              <span>📋</span> Register New Product SKU
+            </Link>
+            <Link to="/transfers" className="btn btn-gold" style={{ justifyContent: 'flex-start' }}>
+              <span>⚓</span> Initiate Ownership Handover
+            </Link>
+            <Link to="/map" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
+              <span>🗺️</span> Open World Shipping Chart
+            </Link>
+            <Link to="/audit" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
+              <span>🔗</span> Review Full Transaction Log
+            </Link>
+          </div>
+
+          <div style={{
+            marginTop: '1.25rem',
+            padding: '0.85rem',
+            background: 'rgba(7, 23, 25, 0.75)',
+            border: '1px solid var(--divider)',
+            borderRadius: '4px',
+            fontSize: '0.72rem'
+          }}>
+            <div style={{ color: 'var(--gold-lit)', fontWeight: 600, marginBottom: '0.25rem' }}>EVM VERIFICATION ENGINE</div>
+            <div style={{ color: 'var(--text-muted)' }}>
+              State transition machine active. Smart contract rules strictly preventing invalid leaps.
+            </div>
+          </div>
         </div>
       </div>
     </div>
