@@ -34,7 +34,16 @@ npm-debug.log*
 
 # Database
 backend/*.db
+backend/*.db-shm
+backend/*.db-wal
 backend/*.sqlite
+*.db
+*.db-shm
+*.db-wal
+
+# Cache
+.cache/
+**/.cache/
 
 # Coverage
 coverage/

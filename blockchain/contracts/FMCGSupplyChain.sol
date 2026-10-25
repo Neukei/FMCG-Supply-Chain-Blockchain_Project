@@ -686,13 +686,13 @@ contract FMCGSupplyChain is AccessControl, ReentrancyGuard {
         bool valid = false;
 
         if (current == Status.REGISTERED) {
-            valid = (next == Status.IN_TRANSIT || next == Status.QUARANTINED ||
+            valid = (next == Status.IN_TRANSIT || next == Status.IN_STOCK || next == Status.QUARANTINED ||
                      next == Status.RECALLED   || next == Status.DAMAGED);
         } else if (current == Status.IN_TRANSIT) {
             valid = (next == Status.RECEIVED   || next == Status.DAMAGED ||
                      next == Status.QUARANTINED || next == Status.RECALLED);
         } else if (current == Status.RECEIVED) {
-            valid = (next == Status.IN_STOCK   || next == Status.QUARANTINED ||
+            valid = (next == Status.IN_STOCK   || next == Status.IN_TRANSIT || next == Status.QUARANTINED ||
                      next == Status.RECALLED   || next == Status.DAMAGED);
         } else if (current == Status.IN_STOCK) {
             valid = (next == Status.IN_TRANSIT || next == Status.SOLD ||

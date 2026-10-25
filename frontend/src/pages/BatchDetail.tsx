@@ -4,7 +4,7 @@ import { getBatch, createTransfer, updateBatchStatus, recallBatch } from '../ser
 import { Batch, Transfer } from '../types';
 import { formatDate, shortAddr, statusClass, statusLabel, explorerUrl, daysUntilExpiry, validNextStatuses } from '../utils/helpers';
 import { useWallet } from '../contexts/WalletContext';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function BatchDetail() {
   const { id } = useParams();
@@ -246,7 +246,7 @@ export default function BatchDetail() {
               Batch QR Code
             </div>
             <div className="qr-frame">
-              <QRCode value={verifyUrl} size={180} level="H" bgColor="#ffffff" fgColor="#0a0f1e" />
+              <QRCodeSVG value={verifyUrl} size={180} level="H" bgColor="#ffffff" fgColor="#0a0f1e" />
             </div>
             <div style={{ fontSize:'0.7rem', color:'var(--text-dim)', textAlign:'center', lineHeight:1.5 }}>
               Scan to verify this batch on any device without a wallet

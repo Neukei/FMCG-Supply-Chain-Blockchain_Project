@@ -14,6 +14,7 @@ const Verify      = lazy(() => import('./pages/Verify'));
 const Audit       = lazy(() => import('./pages/Audit'));
 const Participants = lazy(() => import('./pages/Participants'));
 const ExpiryRecall = lazy(() => import('./pages/ExpiryRecall'));
+const Settings     = lazy(() => import('./pages/Settings'));
 
 function LoadingScreen() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/audit"        element={<Audit />} />
           <Route path="/participants" element={<Participants />} />
           <Route path="/expiry"       element={<ExpiryRecall />} />
+          <Route path="/settings"     element={<Settings />} />
           <Route path="*"             element={<NotFound />} />
         </Route>
       </Routes>

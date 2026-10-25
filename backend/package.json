@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "node --experimental-sqlite src/index.js",
     "start": "node --experimental-sqlite src/index.js",
+    "seed": "node --experimental-sqlite src/database/seed.js",
     "test": "node --experimental-sqlite --test tests/*.test.js"
   },
   "dependencies": {

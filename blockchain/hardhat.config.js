@@ -1,3 +1,6 @@
+const path = require("path");
+process.env.LOCALAPPDATA = path.join(__dirname, ".cache");
+
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config({ path: "../.env" });
 

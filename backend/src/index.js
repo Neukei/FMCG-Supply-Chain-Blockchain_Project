@@ -19,6 +19,26 @@ app.use(cors({ origin: ["http://localhost:5173", "http://localhost:3000"], crede
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    name: "FMCG Blockchain Supply Chain API",
+    version: "1.0.0",
+    health: "/health",
+    endpoints: {
+      dashboard: "/api/dashboard/stats",
+      products: "/api/products",
+      batches: "/api/batches",
+      units: "/api/units",
+      transfers: "/api/transfers",
+      participants: "/api/participants",
+      audit: "/api/audit",
+      verify: "/api/verify/:id"
+    },
+    frontend_app: "http://localhost:5173"
+  });
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", message: "FMCG Supply Chain API", timestamp: new Date().toISOString() });
 });
@@ -38,15 +58,19 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message });
 });
 
-function start() {
+function start(port = PORT) {
   initializeDatabase();
-  app.listen(PORT, () => {
+  return app.listen(port, () => {
     console.log("=================================================");
     console.log("  FMCG Supply Chain Backend API");
-    console.log(`  Running at http://localhost:${PORT}`);
+    console.log(`  Running at http://localhost:${port}`);
     console.log("=================================================");
   });
 }
 
-start();
+if (require.main === module) {
+  start();
+}
+
 module.exports = app;
+module.exports.start = start;

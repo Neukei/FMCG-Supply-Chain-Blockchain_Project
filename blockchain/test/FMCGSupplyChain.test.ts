@@ -1,8 +1,11 @@
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { FMCGSupplyChain } from "../typechain-types";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+const { time } = require("@nomicfoundation/hardhat-network-helpers");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+type FMCGSupplyChain = any;
+type HardhatEthersSigner = any;
 
 // ─────────────────────────────────────────────────────
 // Status enum values matching the contract
@@ -137,7 +140,7 @@ describe("FMCGSupplyChain", function () {
         )
       )
         .to.emit(contract, "ProductRegistered")
-        .withArgs(PID, PRODUCT.name, SKU, manufacturer.address, anyValue());
+        .withArgs(PID, PRODUCT.name, SKU, manufacturer.address, anyValue);
     });
 
     it("Non-manufacturer cannot register a product", async function () {
@@ -202,7 +205,7 @@ describe("FMCGSupplyChain", function () {
         )
       )
         .to.emit(contract, "BatchRegistered")
-        .withArgs(BID, PID, BATCH_NUM, manufacturer.address, MFG_DATE, EXP_DATE, QUANTITY, anyValue());
+        .withArgs(BID, PID, BATCH_NUM, manufacturer.address, MFG_DATE, EXP_DATE, QUANTITY, anyValue);
     });
 
     it("Rejects batch for non-existent product type", async function () {
@@ -258,7 +261,7 @@ describe("FMCGSupplyChain", function () {
     it("UnitRegistered event is emitted", async function () {
       await expect(contract.connect(manufacturer).registerUnit(BID, SERIAL))
         .to.emit(contract, "UnitRegistered")
-        .withArgs(UID, BID, SERIAL, anyValue());
+        .withArgs(UID, BID, SERIAL, anyValue);
     });
 
     it("Prevents duplicate unit serial in same batch", async function () {
@@ -304,7 +307,7 @@ describe("FMCGSupplyChain", function () {
         )
       )
         .to.emit(contract, "OwnershipTransferred")
-        .withArgs(BID, true, manufacturer.address, distributor.address, "SHIP-001", anyValue());
+        .withArgs(BID, true, manufacturer.address, distributor.address, "SHIP-001", anyValue);
     });
 
     it("StatusUpdated event emitted on transfer", async function () {
@@ -314,7 +317,7 @@ describe("FMCGSupplyChain", function () {
         )
       )
         .to.emit(contract, "StatusUpdated")
-        .withArgs(BID, true, Status.REGISTERED, Status.IN_TRANSIT, manufacturer.address, anyValue());
+        .withArgs(BID, true, Status.REGISTERED, Status.IN_TRANSIT, manufacturer.address, anyValue);
     });
 
     it("Transfer history is recorded correctly", async function () {
@@ -417,7 +420,7 @@ describe("FMCGSupplyChain", function () {
     it("RECALLED → IN_STOCK: INVALID (terminal state)", async function () {
       await contract.connect(manufacturer).recallBatch(BID, "Safety recall");
       await expect(
-        contract.connect(admin).updateBatchStatus(BID, Status.IN_STOCK)
+        contract.connect(manufacturer).updateBatchStatus(BID, Status.IN_STOCK)
       ).to.be.revertedWithCustomError(contract, "BatchIsRecalled");
     });
 
@@ -462,7 +465,7 @@ describe("FMCGSupplyChain", function () {
     it("BatchRecalled event emitted with correct parameters", async function () {
       await expect(contract.connect(manufacturer).recallBatch(BID, "Safety concern"))
         .to.emit(contract, "BatchRecalled")
-        .withArgs(BID, "Safety concern", manufacturer.address, anyValue());
+        .withArgs(BID, "Safety concern", manufacturer.address, anyValue);
     });
 
     it("Admin can recall any batch", async function () {
@@ -610,11 +613,3 @@ describe("FMCGSupplyChain", function () {
     });
   });
 });
-
-// Helper: anyValue matcher equivalent for Hardhat (avoid chai-as-promised issues)
-function anyValue() {
-  return {
-    asymmetricMatch: () => true,
-    toString: () => "anyValue",
-  };
-}
